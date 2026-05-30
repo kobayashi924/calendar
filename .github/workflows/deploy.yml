@@ -31,10 +31,17 @@ jobs:
         run: python build.py
         working-directory: calendar-site
 
-      - name: Prepare site
+      - name: Encrypt with password
+        env:
+          STATICRYPT_PASSWORD: ${{ secrets.STATICRYPT_PASSWORD }}
         run: |
-          mkdir -p _site
-          cp calendar-site/index.html _site/index.html
+          npx --yes staticrypt@3 calendar-site/index.html \
+            --short \
+            -d _site \
+            --template-title "Calendar" \
+            --template-instructions "Password" \
+            --template-button "ひらく" \
+            --template-placeholder "合言葉"
 
       - uses: actions/upload-pages-artifact@v3
         with:
