@@ -158,6 +158,16 @@ tr.row-sat .td-dow   { color: #1d4ed8; font-weight: bold; }
 .legend .badge { margin-right: 3px; }
 .legend span.item { margin-right: 12px; white-space: nowrap; }
 .updated { font-size: 7.5pt; color: #999; margin-bottom: 10px; }
+@media screen and (max-width: 768px) {
+  body { font-size: 12pt; padding: 8px; }
+  .page-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  table.cal { font-size: 12pt; }
+  .month-heading { font-size: 14pt; }
+  .events-note { font-size: 9pt; }
+  .badge { width: 14px; height: 14px; line-height: 14px; font-size: 8pt; }
+  .td-date { width: 26px; }
+  .td-dow { width: 20px; }
+}
 @media print {
   @page { size: A4 landscape; margin: 8mm; }
   body { padding: 0; font-size: 7.5pt; }
