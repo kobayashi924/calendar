@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026年度 カレンダー</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  font-size: 9pt;
+  color: #222;
+  background: #fff;
+  padding: 10px;
+}
+.page-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.month-heading {
+  font-size: 10.5pt;
+  font-weight: bold;
+  padding: 8px 8px;
+  background: transparent;
+  border-left: 4px solid #444;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+table.cal {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+  border: 1px solid #888;
+}
+table.cal thead th {
+  padding: 3px 4px;
+  background: #e8e8e8;
+  border-bottom: 2px solid #666;
+  border-right: 1px solid #888;
+  text-align: center;
+  font-weight: bold;
+  white-space: nowrap;
+}
+th.th-events {
+  text-align: left;
+  padding-left: 5px;
+}
+.td-events {
+  position: relative;
+  padding-bottom: 11px;
+}
+.events-note {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  font-size: 6.5pt;
+  color: #666;
+  line-height: 1;
+  white-space: nowrap;
+}
+table.cal tbody td {
+  padding: 3px 4px;
+  border-bottom: 1px solid #aaa;
+  border-right: 1px solid #aaa;
+  vertical-align: top;
+  line-height: 1.45;
+}
+.td-date {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: bold;
+  width: 18px;
+}
+.td-dow {
+  text-align: center;
+  white-space: nowrap;
+  width: 13px;
+}
+tr.row-red           { background: #fff0f0; }
+tr.row-red .td-date,
+tr.row-red .td-dow   { color: #c0392b; font-weight: bold; }
+tr.row-sat           { background: #f0f4ff; }
+tr.row-sat .td-date,
+tr.row-sat .td-dow   { color: #1d4ed8; font-weight: bold; }
+.badge {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  line-height: 10px;
+  text-align: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 5pt;
+  font-weight: bold;
+  vertical-align: middle;
+  margin-right: 1px;
+}
+.badge + .badge { margin-left: -1px; }
+.badge-na { background: #EE6C4D; }
+.badge-ya { background: #2D5D7B; }
+.badge-yu { background: #0A8754; }
+.badge-mi { background: #9E0059; }
+.legend {
+  margin: 4px 0 14px;
+  font-size: 8pt;
+  color: #444;
+}
+.legend .badge { margin-right: 3px; }
+.legend span.item { margin-right: 12px; white-space: nowrap; }
+.updated { font-size: 7.5pt; color: #999; margin-bottom: 10px; }
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body { padding: 0; font-size: 7.5pt; }
+  .legend, .updated { display: none; }
+  .page-row { gap: 6px; margin-bottom: 0; }
+  .page-row:not(:last-child) { page-break-after: always; }
+  table.cal { font-size: 7pt; }
+  table.cal tbody td { padding: 3px 3px; }
+  .month-heading { font-size: 9pt; padding: 6px 6px; }
+  .events-note { font-size: 6pt; }
+}
+</style>
+</head>
+<body>
+<div class="legend">
+  <span class="item"><span class="badge badge-na">な</span>なる実</span>
+  <span class="item"><span class="badge badge-ya">や</span>弥生</span>
+  <span class="item"><span class="badge badge-yu">ゆ</span>由布子</span>
+  <span class="item"><span class="badge badge-mi">み</span>充希</span>
+</div>
+<div class="updated" id="updated"></div>
+<div id="calendar"></div>
+<script>
+const DOW_JP = ['日','月','火','水','木','金','土'];
+
+function dateKey(y, m, d) {
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+const holidays = {
+  '2026-04-29': '昭和の日',
+  '2026-05-03': '憲法記念日',
+  '2026-05-04': 'みどりの日',
+  '2026-05-05': 'こどもの日',
+  '2026-05-06': '振替休日',
+  '2026-07-20': '海の日',
+  '2026-08-11': '山の日',
+  '2026-09-21': '敬老の日',
+  '2026-09-22': '国民の休日',
+  '2026-09-23': '秋分の日',
+  '2026-10-12': 'スポーツの日',
+  '2026-11-03': '文化の日',
+  '2026-11-23': '勤労感謝の日',
+  '2027-01-01': '元日',
+  '2027-01-11': '成人の日',
+  '2027-02-11': '建国記念日',
+  '2027-02-23': '天皇誕生日',
+  '2027-03-21': '春分の日',
+  '2027-03-22': '振替休日'
+};
+const narumiEvents = {
+  '2026-04-06': '始業式・避難訓練①',
+  '2026-04-07': '入学式',
+  '2026-04-08': 'オリエンテーション(1)・新入生勉強会',
+  '2026-04-09': '学力診断(1)(2)・セーフティ教室(1)',
+  '2026-04-15': '海外語学研修説明会',
+  '2026-04-20': '腎臓検診1次',
+  '2026-04-21': '腎臓検診1次',
+  '2026-04-22': '定期健康診断',
+  '2026-04-24': '結核・心臓検診1次',
+  '2026-04-27': '水曜授業',
+  '2026-05-08': '校外学習(2)(3)',
+  '2026-05-19': '考査1',
+  '2026-05-20': '考査1',
+  '2026-05-21': '考査1',
+  '2026-05-22': '考査１',
+  '2026-05-29': '体育祭',
+  '2026-06-01': '予備日(以降6/5まで順延)',
+  '2026-06-06': '保護者会(1)(2)',
+  '2026-06-09': '大学訪問',
+  '2026-06-15': '授業公開週間(始)',
+  '2026-06-19': '授業公開週間(終)',
+  '2026-07-01': '考査2',
+  '2026-07-02': '考査2',
+  '2026-07-03': '考査2',
+  '2026-07-06': '考査2',
+  '2026-07-07': '実力テスト',
+  '2026-07-17': '終業式',
+  '2026-07-21': '夏季休業日始',
+  '2026-08-28': '始業式',
+  '2026-09-03': '文化祭準備(午後)',
+  '2026-09-04': '文化祭準備(全日)',
+  '2026-09-05': '文化祭',
+  '2026-09-06': '文化祭',
+  '2026-09-07': '振替休業',
+  '2026-09-08': '振替休業',
+  '2026-09-11': 'オンライン学習デー',
+  '2026-09-26': '保護者会(1)(2)',
+  '2026-10-03': '学校説明会(午前)',
+  '2026-10-13': '考査3',
+  '2026-10-14': '考査3',
+  '2026-10-15': '考査3',
+  '2026-10-16': '考査3',
+  '2026-11-02': '開校記念日',
+  '2026-11-03': '修学旅行(2)始',
+  '2026-11-06': '修学旅行(2)終',
+  '2026-11-09': '振替休日(2)',
+  '2026-11-11': '実力テスト(1)(2)',
+  '2026-11-14': '授業',
+  '2026-12-01': '考査4',
+  '2026-12-02': '考査4',
+  '2026-12-03': '考査4',
+  '2026-12-04': '考査4',
+  '2026-12-23': '終業式',
+  '2026-12-24': '冬季休業日始',
+  '2027-01-08': '始業式',
+  '2027-01-13': '3年0学期集会(2)',
+  '2027-01-18': '実力テスト(2)',
+  '2027-01-25': '入学者選抜前日準備',
+  '2027-01-26': '入学者選抜',
+  '2027-01-27': '入学者選抜',
+  '2027-01-28': '実力テスト(2)',
+  '2027-01-29': '実力テスト(1)(2)',
+  '2027-02-22': '採点日',
+  '2027-02-24': '採点日',
+  '2027-02-25': '採点日',
+  '2027-03-01': '考査5',
+  '2027-03-02': '考査5',
+  '2027-03-03': '考査5',
+  '2027-03-04': '考査5',
+  '2027-03-05': '卒業式',
+  '2027-03-25': '修了式',
+  '2027-03-26': '春季休業日始'
+};
+const yayoiEvents = {
+  '2026-05-01': '開校記念日',
+  '2026-05-08': '防災宿泊体験(2)',
+  '2026-05-09': '防災宿泊体験(2)',
+  '2026-05-10': 'U-15リーグ',
+  '2026-05-17': '東京都予選大会',
+  '2026-05-23': '運動会',
+  '2026-05-24': 'U-15リーグ',
+  '2026-05-25': '振替休業日(5/23分)',
+  '2026-05-28': '5時間授業',
+  '2026-05-31': 'U-15リーグ',
+  '2026-06-17': '期末考査',
+  '2026-06-18': '期末考査',
+  '2026-06-19': '期末考査',
+  '2026-06-25': '5時間授業',
+  '2026-07-01': '職場体験(2)始',
+  '2026-07-02': '5時間授業',
+  '2026-07-03': '職場体験(2)終',
+  '2026-07-11': '土曜授業公開①・オープンキャンパス①',
+  '2026-07-15': '保護者会(オンライン)',
+  '2026-07-17': '終業式',
+  '2026-07-21': '夏季休業日(始)・三者面談(始)・夏期C・P(始)',
+  '2026-07-27': '夏期C・P(終)',
+  '2026-07-28': '三者面談(終)',
+  '2026-08-31': '夏季休業日(終)',
+  '2026-09-01': '始業式・防災引き渡し訓練',
+  '2026-09-10': '5時間授業',
+  '2026-09-12': '土曜授業公開②・オープンキャンパス②・学校説明会',
+  '2026-09-29': '中間考査',
+  '2026-09-30': '中間考査',
+  '2026-10-01': '都民の日(学校開庁日)',
+  '2026-10-02': '全校英検',
+  '2026-10-08': '演劇鑑賞教室(2)',
+  '2026-10-15': '5時間授業',
+  '2026-10-17': '土曜授業公開③・オープンキャンパス③・道徳授業地区公開講座',
+  '2026-10-23': '全校漢検',
+  '2026-10-31': '学習発表会',
+  '2026-11-02': '振替休業日(10/31分)',
+  '2026-11-12': '5時間授業',
+  '2026-11-16': '期末考査',
+  '2026-11-17': '期末考査',
+  '2026-11-18': '期末考査',
+  '2026-12-02': '三者面談始',
+  '2026-12-09': '三者面談終',
+  '2026-12-12': '土曜授業公開④',
+  '2026-12-15': '5時間授業',
+  '2026-12-25': '終業式',
+  '2026-12-26': '冬季休業日(始)',
+  '2027-01-07': '冬季休業日(終)',
+  '2027-01-08': '始業式',
+  '2027-01-16': '土曜授業公開⑤・百人一首大会(1・2)',
+  '2027-01-21': '5時間授業',
+  '2027-02-02': 'ESAT-J(1・2)',
+  '2027-02-05': '校外学習(2)',
+  '2027-02-12': '全校数検(1・2)',
+  '2027-02-16': '5時間授業',
+  '2027-02-24': '学年末考査',
+  '2027-02-25': '学年末考査',
+  '2027-02-26': '学年末考査',
+  '2027-03-01': '領域診断テスト(1・2)',
+  '2027-03-05': 'TGG(2)',
+  '2027-03-11': '5時間授業',
+  '2027-03-19': '卒業式',
+  '2027-03-23': '保護者会(1・2)※⑥カット',
+  '2027-03-25': '修了式',
+  '2027-03-26': '春季休業日(始)'
+};
+const mitsukiEvents = {
+  '2026-07-04': '土曜授業公開',
+  '2026-07-17': '終業式',
+  '2026-07-21': '夏季休業日(始) 個人面談(始)',
+  '2026-07-24': '個人面談(終)',
+  '2026-08-31': '夏季休業日(修)',
+  '2026-09-01': '始業式 引き渡し訓練',
+  '2026-09-26': '土曜授業公開 保護者会',
+  '2026-10-01': '都民の日(学校開庁日)',
+  '2026-10-10': '運動会',
+  '2026-10-11': '運動会予備日',
+  '2026-10-13': '運動会予備日',
+  '2026-10-14': '運動会予備日',
+  '2026-10-16': '振替休業日',
+  '2026-11-28': '学習発表会(保護者鑑賞日)',
+  '2026-11-30': '振替休業日',
+  '2026-12-01': '個人面談(始)',
+  '2026-12-08': '個人面談(終)',
+  '2026-12-25': '終業式',
+  '2026-12-26': '冬季休業日(始)',
+  '2027-01-07': '冬季休業日(終)',
+  '2027-01-08': '始業式',
+  '2027-02-20': '土曜授業公開 保護者会',
+  '2027-03-24': '修了式',
+  '2027-03-26': '春季休業日(始)'
+};
+const yukoEvents = {
+  '2026-05-31': 'jroots試合',
+  '2026-06-05': '校外学習',
+  '2026-07-04': '土曜授業公開 宿泊説明会',
+  '2026-07-17': '終業式',
+  '2026-07-21': '夏季休業日(始) 個人面談(始)',
+  '2026-07-24': '個人面談(終)',
+  '2026-08-31': '夏季休業日(修)',
+  '2026-09-01': '始業式 引き渡し訓練',
+  '2026-09-07': '魚沼',
+  '2026-09-08': '魚沼',
+  '2026-09-09': '魚沼',
+  '2026-09-26': '土曜授業公開 保護者会',
+  '2026-10-01': '都民の日(学校開庁日)',
+  '2026-10-10': '運動会',
+  '2026-10-11': '運動会予備日',
+  '2026-10-13': '運動会予備日',
+  '2026-10-14': '運動会予備日',
+  '2026-10-16': '振替休業日',
+  '2026-10-22': '陸上記録会',
+  '2026-10-30': '開校記念日',
+  '2026-11-28': '学習発表会(保護者鑑賞日)',
+  '2026-11-30': '振替休業日',
+  '2026-12-01': '個人面談(始)',
+  '2026-12-08': '個人面談(終)',
+  '2026-12-25': '終業式',
+  '2026-12-26': '冬季休業日(始)',
+  '2027-01-07': '冬季休業日(終)',
+  '2027-01-08': '始業式',
+  '2027-02-20': '土曜授業公開 保護者会',
+  '2027-02-26': '保護者会',
+  '2027-03-24': '修了式',
+  '2027-03-25': '卒業式',
+  '2027-03-26': '春季休業日(始)'
+};
+const zeninEvents = {
+  '2026-05-03': '熊の湯',
+  '2026-05-05': '栂池',
+  '2026-05-09': '着物決め',
+  '2026-05-16': 'DIY (6畳モルタル)',
+  '2026-05-17': '美麻掃除 8:00',
+  '2026-06-13': '[DIY？]',
+  '2026-06-14': '[DIY？]',
+  '2026-06-20': 'DIY',
+  '2026-06-21': 'カスタムフェア',
+  '2026-06-27': '[DIY？]',
+  '2026-06-28': '[DIY？]',
+  '2026-07-12': '[STO？]',
+  '2026-07-18': '西日本',
+  '2026-07-19': '西日本',
+  '2026-07-20': '西日本',
+  '2026-07-25': '[STO？]',
+  '2026-07-26': '[STO？]',
+  '2026-08-01': '[DIY？]',
+  '2026-08-02': '[DIY？]',
+  '2026-08-08': '酒田',
+  '2026-08-09': '酒田',
+  '2026-08-11': '美麻',
+  '2026-08-12': '美麻',
+  '2026-08-13': '美麻',
+  '2026-08-14': '美麻',
+  '2026-08-15': '美麻',
+  '2026-08-16': '美麻',
+  '2026-08-22': '那須ハイ・もてぎ (補)',
+  '2026-08-23': '那須ハイ・もてぎ (補)',
+  '2026-08-29': '那須ハイ・もてぎ',
+  '2026-08-30': '那須ハイ・もてぎ',
+  '2026-09-05': '[VRA？]',
+  '2026-09-06': '[VRA？]',
+  '2026-09-12': '[VRA？]',
+  '2026-09-13': '[VRA？]',
+  '2026-09-27': 'ピアノ発表会',
+  '2026-10-10': '[VRA？]',
+  '2026-10-11': '[VRA？]',
+  '2026-10-12': '[VRA？]',
+  '2026-10-17': '三回忌',
+  '2026-10-25': '七五三',
+  '2026-11-07': '[総会・準備？]',
+  '2026-11-08': '[総会・準備？]',
+  '2026-11-15': '[総会・準備？]',
+  '2026-11-21': '[STO？]',
+  '2026-11-22': '[STO？]',
+  '2026-11-23': '[STO？]'
+};
+
+const MONTHS = [
+  [2026,4],[2026,5],[2026,6],[2026,7],
+  [2026,8],[2026,9],[2026,10],[2026,11],
+  [2026,12],[2027,1],[2027,2],[2027,3]
+];
+
+function buildMonth(year, month) {
+  const numDays = daysInMonth(year, month);
+  const block = document.createElement('div');
+  block.className = 'month-block';
+
+  const heading = document.createElement('div');
+  heading.className = 'month-heading';
+  heading.textContent = year + '年' + month + '月';
+  block.appendChild(heading);
+
+  const table = document.createElement('table');
+  table.className = 'cal';
+  table.innerHTML = '';
+
+  const tbody = document.createElement('tbody');
+
+  for (let d = 1; d <= numDays; d++) {
+    const key     = dateKey(year, month, d);
+    const dow     = new Date(year, month - 1, d).getDay();
+    const holiday = holidays[key]      || '';
+    const narumi  = narumiEvents[key]  || '';
+    const yayoi   = yayoiEvents[key]   || '';
+    const mitsuki = mitsukiEvents[key] || '';
+    const yuko    = yukoEvents[key]    || '';
+    const zenin   = zeninEvents[key]   || '';
+
+    const tr = document.createElement('tr');
+    if (holiday || dow === 0) tr.className = 'row-red';
+    else if (dow === 6)       tr.className = 'row-sat';
+
+    const tdDate = document.createElement('td');
+    tdDate.className = 'td-date';
+    tdDate.textContent = d;
+
+    const tdDow = document.createElement('td');
+    tdDow.className = 'td-dow';
+    tdDow.textContent = DOW_JP[dow];
+
+    const tdEvents = document.createElement('td');
+    tdEvents.className = 'td-events';
+    const items = [];
+    const notes = [];
+    function pushEvent(badges, raw) {
+      if (!raw) return;
+      const bracketRe = /\[([^\]]+)\]/g;
+      let m;
+      while ((m = bracketRe.exec(raw)) !== null) notes.push(m[1]);
+      const stripped = raw.replace(/\[([^\]]+)\]/g, '').trim();
+      if (stripped) items.push({ badges, text: stripped });
+    }
+    pushEvent([], zenin);
+    pushEvent([['na','な']], narumi);
+    pushEvent([['ya','や']], yayoi);
+    if (yuko && mitsuki && yuko === mitsuki) {
+      pushEvent([['yu','ゆ'],['mi','み']], yuko);
+    } else {
+      pushEvent([['yu','ゆ']], yuko);
+      pushEvent([['mi','み']], mitsuki);
+    }
+    items.forEach((item, idx) => {
+      if (idx > 0) tdEvents.appendChild(document.createTextNode(' / '));
+      item.badges.forEach(([cls, label]) => {
+        const span = document.createElement('span');
+        span.className = 'badge badge-' + cls;
+        span.textContent = label;
+        tdEvents.appendChild(span);
+      });
+      if (item.badges.length) tdEvents.appendChild(document.createTextNode(' '));
+      tdEvents.appendChild(document.createTextNode(item.text));
+    });
+    if (notes.length) {
+      const note = document.createElement('span');
+      note.className = 'events-note';
+      note.textContent = notes.map(n => '(' + n + ')').join(' ');
+      tdEvents.appendChild(note);
+    }
+
+    tr.appendChild(tdDate);
+    tr.appendChild(tdDow);
+    tr.appendChild(tdEvents);
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+  block.appendChild(table);
+  return block;
+}
+
+const calDiv = document.getElementById('calendar');
+for (let i = 0; i < MONTHS.length; i += 3) {
+  const row = document.createElement('div');
+  row.className = 'page-row';
+  MONTHS.slice(i, i + 3).forEach(([y, m]) => row.appendChild(buildMonth(y, m)));
+  calDiv.appendChild(row);
+}
+
+document.getElementById('updated').textContent = '最終更新: 2026-05-30 11:13 (JST)';
+</script>
+</body>
+</html>
