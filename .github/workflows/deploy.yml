@@ -40,8 +40,8 @@ jobs:
             -d _site \
             --template-title "Calendar" \
             --template-instructions "Password" \
-            --template-button "ひらく" \
-            --template-placeholder "合言葉"
+            --template-button "Open" \
+            --template-placeholder "Password"
 
       - uses: actions/upload-pages-artifact@v3
         with:
